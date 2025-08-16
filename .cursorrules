@@ -1,0 +1,9 @@
+# In python projects:
+
+## UV Package Manager
+- Use uv run to run Python tools without activating virtual environments
+- For adding packages
+  - uv add package-name to add a package
+  - uv add package-name --upgrade to upgrade a package
+  - Be careful with uv pip install as it may downgrade packages
+- Never add packages manually to the pyproject.toml
