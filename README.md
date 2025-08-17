@@ -12,18 +12,77 @@ An MCP server that provides tools to interact with the Honeybadger API, focusing
 
 ## Installation
 
-1. Make sure you have Python 3.12+ installed
-2. Install dependencies:
+### Prerequisites
+
+- Python 3.12+
+- uv (Python package manager)
+- Claude Code CLI
+
+### Setup Steps
+
+1. Clone this repository to your local machine:
 
 ```bash
-uv add honeybadger mcp python-dotenv requests
+git clone https://github.com/yourusername/honeybadger-mcp.git
+cd honeybadger-mcp
 ```
 
-3. Configure your Honeybadger API token in the `.env` file:
+2. Install dependencies using uv:
 
+```bash
+uv sync
 ```
-HONEYBADGER_API_TOKEN=your_api_token_here
+
+3. **IMPORTANT**: Create a `.env` file in the project directory with your Honeybadger API token:
+
+```bash
+# Create .env file in the honeybadger-mcp directory
+echo "HONEYBADGER_API_TOKEN=your_api_token_here" > .env
 ```
+
+⚠️ **Note**: The `.env` file must be in the same directory as `server.py` for the token to be loaded correctly.
+
+### Adding to Claude Code
+
+#### Option 1: Using Claude CLI (Recommended)
+
+```bash
+claude mcp add honeybadger -s user -- /path/to/uv --directory /path/to/honeybadger-mcp run server.py
+```
+
+For example, if you cloned to `~/code/mcp-servers/honeybadger-mcp`:
+
+```bash
+claude mcp add honeybadger -s user -- ~/.cargo/bin/uv --directory ~/code/mcp-servers/honeybadger-mcp run server.py
+```
+
+#### Option 2: Manual Configuration
+
+Edit your Claude configuration file:
+- macOS/Linux: `~/.claude.json`
+- Windows: `%USERPROFILE%\.claude.json`
+
+Add the following to the `mcpServers` section:
+
+```json
+{
+  "mcpServers": {
+    "honeybadger": {
+      "type": "stdio",
+      "command": "/path/to/uv",
+      "args": [
+        "--directory",
+        "/path/to/honeybadger-mcp",
+        "run",
+        "server.py"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+Replace `/path/to/uv` with your actual uv installation path (e.g., `~/.cargo/bin/uv`) and `/path/to/honeybadger-mcp` with the full path to this project.
 
 ### API Token Requirements
 
@@ -43,21 +102,14 @@ You can find or create your personal access token in the Honeybadger dashboard u
 python server.py
 ```
 
-### Using with Claude Desktop
+### Verifying Installation
 
-To use this server with Claude Desktop:
+After adding the MCP server, verify it's working:
 
-```bash
-mcp install server.py
-```
-
-### Using with MCP Inspector
-
-For development and testing:
-
-```bash
-mcp dev server.py
-```
+1. Restart Claude Code or reload your configuration
+2. In Claude Code, type `/mcp` to see available MCP servers
+3. You should see "honeybadger" in the list
+4. Test by asking Claude to list your Honeybadger projects
 
 ### Testing API Functions Directly
 
