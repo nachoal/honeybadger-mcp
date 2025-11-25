@@ -44,7 +44,22 @@ def get_config() -> HoneybadgerConfig:
     )
 
 
-def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str, Any]] = None, 
+def _add_list_metadata(response: Dict[str, Any], limit: int, result_key: str = "results") -> Dict[str, Any]:
+    """Add metadata to list responses to help agents understand pagination."""
+    if isinstance(response, dict) and result_key in response:
+        results = response[result_key]
+        count = len(results) if isinstance(results, list) else 0
+        response["_meta"] = {
+            "returned": count,
+            "limit": limit,
+            "has_more": count >= limit,
+        }
+        if count >= limit:
+            response["_meta"]["hint"] = "More results may exist. Increase limit or use time filters to paginate."
+    return response
+
+
+def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str, Any]] = None,
                  data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Make a request to the Honeybadger API.
@@ -109,20 +124,22 @@ def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str,
 @mcp.tool()
 def get_projects(account_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """
-    Get a list of all projects in your Honeybadger account.
-    
+    List all projects in your Honeybadger account. Start here to get project IDs.
+
+    WORKFLOW: Call this first to get project_id, then use get_faults(project_id).
+
     Args:
-        account_id: Optional ID of the account to filter projects by
-        
+        account_id: Optional account ID filter (rarely needed)
+
     Returns:
-        List of projects
+        List of projects with id, name, fault_count, unresolved_fault_count, environments
     """
     params = {}
     if account_id:
         params["account_id"] = account_id
-        
+
     response = _make_request("projects", params=params)
-    return response
+    return _add_list_metadata(response, 100)  # Projects rarely paginate
 
 
 @mcp.tool()
@@ -291,19 +308,30 @@ def get_project_occurrences(project_id: Optional[int] = None,
 # Fault Management Tools
 
 @mcp.tool()
-def get_faults(project_id: int, query: Optional[str] = None, 
-              limit: Optional[int] = 25, order: Optional[str] = "recent") -> List[Dict[str, Any]]:
+def get_faults(project_id: int, query: Optional[str] = None,
+              limit: Optional[int] = 10, order: Optional[str] = "recent") -> List[Dict[str, Any]]:
     """
-    Get a list of faults (exceptions) for a project.
-    
+    Get a list of faults (error groups) for a project. This is usually your starting point.
+
+    WORKFLOW:
+    1. Call get_faults() to see error groups
+    2. Use get_fault_notices(fault_id) to see individual occurrences
+    3. Use update_fault(fault_id, resolved=True) to mark fixed
+
     Args:
         project_id: The ID of the project
-        query: Optional search query (e.g., "environment:production -is:resolved")
-        limit: Maximum number of results to return (default: 25)
-        order: Sort order ("recent" or "frequent")
-        
+        query: Search filter. Examples:
+               - "environment:production" - only production errors
+               - "-is:resolved" - only unresolved (active) errors
+               - "is:resolved" - only resolved errors
+               - "is:ignored" - only ignored errors
+               - "class:NoMethodError" - specific error class
+               - Combine: "environment:production -is:resolved"
+        limit: Max results (default: 10, max: 25)
+        order: "recent" (by last occurrence) or "frequent" (by count)
+
     Returns:
-        List of faults
+        List of faults with id, message, class, component, action, counts, and status
     """
     params = {}
     if query:
@@ -312,9 +340,9 @@ def get_faults(project_id: int, query: Optional[str] = None,
         params["limit"] = limit
     if order:
         params["order"] = order
-        
+
     response = _make_request(f"projects/{project_id}/faults", params=params)
-    return response
+    return _add_list_metadata(response, limit or 10)
 
 
 @mcp.tool()
@@ -497,25 +525,28 @@ def get_fault_notices(
     fault_id: int,
     created_after: Optional[int] = None,
     created_before: Optional[int] = None,
-    limit: Optional[int] = 25,
+    limit: Optional[int] = 5,
     compact: bool = True,
     backtrace_limit: int = 5,
 ) -> List[Dict[str, Any]]:
     """
-    Get a list of notices for the given fault.
+    Get individual occurrences (notices) of a fault to see when/how it happened.
+
+    WORKFLOW: Call this after get_faults() to investigate a specific error.
+    Usually 3-5 notices are enough to understand the pattern.
 
     Args:
         project_id: The ID of the project
-        fault_id: The ID of the fault
-        created_after: Unix timestamp (seconds since epoch) to filter notices created after this time
-        created_before: Unix timestamp (seconds since epoch) to filter notices created before this time
-        limit: Number of results to return (max and default are 25)
-        compact: If True (default), returns a compact version with only essential fields
-                 to reduce token usage. Set to False for full API response.
-        backtrace_limit: Number of backtrace frames to include in compact mode (default: 5)
+        fault_id: The ID of the fault (from get_faults results)
+        created_after: Unix timestamp to filter notices after this time
+        created_before: Unix timestamp to filter notices before this time
+        limit: Number of results (default: 5, max: 25). Start small, increase if needed.
+        compact: If True (default), returns essential fields only (~95% smaller).
+                 Set to False for full data including source code in backtrace.
+        backtrace_limit: Stack frames to include in compact mode (default: 5)
 
     Returns:
-        List of notices ordered by creation time descending
+        List of notices with error details, timestamps, and stack traces
     """
     params: Dict[str, Any] = {}
     if created_after is not None:
@@ -538,11 +569,10 @@ def get_fault_notices(
         ]
         response["_compact_mode"] = {
             "enabled": True,
-            "note": "Response is compacted to reduce tokens. For full data (including complete backtrace with source code, full request params, environment stats, cookies, session), call with compact=False.",
-            "backtrace_limit": backtrace_limit,
+            "hint": "For full backtrace with source code, call with compact=False",
         }
 
-    return response
+    return _add_list_metadata(response, limit or 5)
 
 
 @mcp.tool()
