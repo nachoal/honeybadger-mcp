@@ -432,6 +432,65 @@ def get_fault_occurrences(project_id: int, fault_id: int,
     return response
 
 
+def _compact_notice(notice: Dict[str, Any], backtrace_limit: int = 5) -> Dict[str, Any]:
+    """
+    Create a compact version of a notice with only essential fields.
+
+    Args:
+        notice: The full notice object
+        backtrace_limit: Number of backtrace frames to include
+
+    Returns:
+        Compact notice with reduced token footprint
+    """
+    compact = {
+        "id": notice.get("id"),
+        "created_at": notice.get("created_at"),
+        "message": notice.get("message"),
+        "environment_name": notice.get("environment_name"),
+        "url": notice.get("url"),
+    }
+
+    # Include only application trace (more relevant than full backtrace)
+    # and limit to first N frames
+    app_trace = notice.get("application_trace", [])
+    if app_trace:
+        compact["application_trace"] = [
+            {
+                "file": frame.get("application_file") or frame.get("file"),
+                "method": frame.get("method"),
+                "number": frame.get("number"),
+            }
+            for frame in app_trace[:backtrace_limit]
+        ]
+        if len(app_trace) > backtrace_limit:
+            compact["application_trace_truncated"] = f"{len(app_trace) - backtrace_limit} more frames"
+
+    # Include minimal request context
+    request = notice.get("request", {})
+    if request:
+        compact["request"] = {
+            "component": request.get("component"),
+            "action": request.get("action"),
+        }
+        # Include job info if present (for background jobs)
+        params = request.get("params", {})
+        if "job" in params:
+            job = params["job"]
+            compact["request"]["job_class"] = job.get("class")
+            compact["request"]["job_queue"] = job.get("queue")
+
+    # Include deploy info (useful for identifying versions)
+    deploy = notice.get("deploy", {})
+    if deploy:
+        compact["deploy"] = {
+            "revision": deploy.get("revision"),
+            "local_username": deploy.get("local_username"),
+        }
+
+    return compact
+
+
 @mcp.tool()
 def get_fault_notices(
     project_id: int,
@@ -439,6 +498,8 @@ def get_fault_notices(
     created_after: Optional[int] = None,
     created_before: Optional[int] = None,
     limit: Optional[int] = 25,
+    compact: bool = True,
+    backtrace_limit: int = 5,
 ) -> List[Dict[str, Any]]:
     """
     Get a list of notices for the given fault.
@@ -449,6 +510,9 @@ def get_fault_notices(
         created_after: Unix timestamp (seconds since epoch) to filter notices created after this time
         created_before: Unix timestamp (seconds since epoch) to filter notices created before this time
         limit: Number of results to return (max and default are 25)
+        compact: If True (default), returns a compact version with only essential fields
+                 to reduce token usage. Set to False for full API response.
+        backtrace_limit: Number of backtrace frames to include in compact mode (default: 5)
 
     Returns:
         List of notices ordered by creation time descending
@@ -465,6 +529,19 @@ def get_fault_notices(
         f"projects/{project_id}/faults/{fault_id}/notices",
         params=params,
     )
+
+    # Apply compact transformation if requested
+    if compact and isinstance(response, dict) and "results" in response:
+        response["results"] = [
+            _compact_notice(notice, backtrace_limit)
+            for notice in response["results"]
+        ]
+        response["_compact_mode"] = {
+            "enabled": True,
+            "note": "Response is compacted to reduce tokens. For full data (including complete backtrace with source code, full request params, environment stats, cookies, session), call with compact=False.",
+            "backtrace_limit": backtrace_limit,
+        }
+
     return response
 
 
