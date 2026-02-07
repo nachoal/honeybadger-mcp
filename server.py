@@ -480,6 +480,14 @@ def _compact_notice(notice: Dict[str, Any], backtrace_limit: int = 5) -> Dict[st
         "url": notice.get("url"),
     }
 
+    # Surface the code revision the notice came from. This is often the quickest
+    # way to detect mixed deploys / old workers still running after a release.
+    environment = notice.get("environment", {})
+    if isinstance(environment, dict):
+        revision = environment.get("revision")
+        if revision:
+            compact["environment_revision"] = revision
+
     # Include only application trace (more relevant than full backtrace)
     # and limit to first N frames
     app_trace = notice.get("application_trace", [])
