@@ -7,6 +7,7 @@ focusing on retrieving and managing projects and their exceptions (faults).
 """
 
 import os
+import logging
 import requests
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
@@ -23,9 +24,12 @@ mcp = FastMCP("Honeybadger API")
 HONEYBADGER_API_TOKEN = os.getenv("HONEYBADGER_API_TOKEN")
 HONEYBADGER_BASE_URL = "https://app.honeybadger.io/v2"
 
+logger = logging.getLogger("honeybadger_mcp")
+
 if not HONEYBADGER_API_TOKEN:
-    print("WARNING: HONEYBADGER_API_TOKEN not found in environment variables.")
-    print("Please set it in your .env file or environment variables.")
+    # MCP stdio servers communicate over stdout; keep diagnostics on stderr via logging.
+    logger.warning("HONEYBADGER_API_TOKEN not found in environment variables.")
+    logger.warning("Set it in your .env file or environment variables.")
 
 
 @dataclass
@@ -89,8 +93,7 @@ def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str,
     auth = (HONEYBADGER_API_TOKEN, "")
     
     try:
-        print(f"Making {method} request to {url}")
-        print(f"Auth: Using token of length {len(HONEYBADGER_API_TOKEN)} characters")
+        logger.debug("Honeybadger request: %s %s params=%s", method, url, params)
         
         if method == "GET":
             response = requests.get(url, auth=auth, headers=headers, params=params)
@@ -103,10 +106,8 @@ def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str,
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
         
-        print(f"Response status code: {response.status_code}")
-        
         if response.status_code >= 400:
-            print(f"Error response: {response.text}")
+            logger.debug("Honeybadger error response (%s): %s", response.status_code, response.text)
         
         response.raise_for_status()
         
@@ -115,7 +116,7 @@ def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str,
         
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Request exception: {str(e)}")
+        logger.warning("Honeybadger request failed: %s", str(e))
         return {"error": str(e)}
 
 
