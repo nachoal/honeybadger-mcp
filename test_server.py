@@ -90,8 +90,8 @@ def main():
     fault_notices_parser = subparsers.add_parser("fault-notices", help="List notices for a fault")
     fault_notices_parser.add_argument("project_id", type=int, help="Project ID")
     fault_notices_parser.add_argument("fault_id", type=int, help="Fault ID")
-    fault_notices_parser.add_argument("--created-after", type=int, dest="created_after", help="Unix timestamp: only notices created after this time")
-    fault_notices_parser.add_argument("--created-before", type=int, dest="created_before", help="Unix timestamp: only notices created before this time")
+    fault_notices_parser.add_argument("--created-after", type=float, dest="created_after", help="Unix timestamp (float ok): only notices created after this time")
+    fault_notices_parser.add_argument("--created-before", type=float, dest="created_before", help="Unix timestamp (float ok): only notices created before this time")
     fault_notices_parser.add_argument("--limit", type=int, default=25, help="Number of results to return (max/default 25)")
 
     notice_parser = subparsers.add_parser("notice", help="Get a single notice by ID")

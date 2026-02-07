@@ -524,8 +524,8 @@ def _compact_notice(notice: Dict[str, Any], backtrace_limit: int = 5) -> Dict[st
 def get_fault_notices(
     project_id: int,
     fault_id: int,
-    created_after: Optional[int] = None,
-    created_before: Optional[int] = None,
+    created_after: Optional[float] = None,
+    created_before: Optional[float] = None,
     limit: Optional[int] = 5,
     compact: bool = True,
     backtrace_limit: int = 5,
