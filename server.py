@@ -121,7 +121,7 @@ def _make_request(endpoint: str, method: str = "GET", params: Optional[Dict[str,
 
 # Project Management Tools
 
-@mcp.tool()
+@mcp.tool(description="List projects (optionally filter by account_id).")
 def get_projects(account_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     List all projects in your Honeybadger account. Start here to get project IDs.
@@ -142,7 +142,7 @@ def get_projects(account_id: Optional[int] = None) -> List[Dict[str, Any]]:
     return _add_list_metadata(response, 100)  # Projects rarely paginate
 
 
-@mcp.tool()
+@mcp.tool(description="Get details for a project.")
 def get_project(project_id: int) -> Dict[str, Any]:
     """
     Get details for a specific project.
@@ -164,7 +164,7 @@ def get_project(project_id: int) -> Dict[str, Any]:
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Create a project.")
 def create_project(name: str, account_id: Optional[int] = None, 
                   resolve_errors_on_deploy: Optional[bool] = None,
                   disable_public_links: Optional[bool] = None,
@@ -215,7 +215,7 @@ def create_project(name: str, account_id: Optional[int] = None,
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Update a project.")
 def update_project(project_id: int, name: Optional[str] = None,
                   resolve_errors_on_deploy: Optional[bool] = None,
                   disable_public_links: Optional[bool] = None,
@@ -264,7 +264,7 @@ def update_project(project_id: int, name: Optional[str] = None,
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Delete a project.")
 def delete_project(project_id: int) -> Dict[str, str]:
     """
     Delete a project from your Honeybadger account.
@@ -279,7 +279,7 @@ def delete_project(project_id: int) -> Dict[str, str]:
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Get occurrences time-series for a project (or all projects).")
 def get_project_occurrences(project_id: Optional[int] = None, 
                            period: Optional[str] = "hour",
                            environment: Optional[str] = None) -> List[List[Union[int, float]]]:
@@ -307,7 +307,7 @@ def get_project_occurrences(project_id: Optional[int] = None,
 
 # Fault Management Tools
 
-@mcp.tool()
+@mcp.tool(description="List faults for a project (supports query, limit, order).")
 def get_faults(project_id: int, query: Optional[str] = None,
               limit: Optional[int] = 10, order: Optional[str] = "recent") -> List[Dict[str, Any]]:
     """
@@ -345,7 +345,7 @@ def get_faults(project_id: int, query: Optional[str] = None,
     return _add_list_metadata(response, limit or 10)
 
 
-@mcp.tool()
+@mcp.tool(description="Get details for a fault.")
 def get_fault_details(project_id: int, fault_id: int) -> Dict[str, Any]:
     """
     Get detailed information about a specific fault.
@@ -361,7 +361,7 @@ def get_fault_details(project_id: int, fault_id: int) -> Dict[str, Any]:
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Get fault summary stats for a project.")
 def get_fault_summary(project_id: int, query: Optional[str] = None) -> Dict[str, Any]:
     """
     Get a summary of faults for a project, including counts by environment and status.
@@ -381,7 +381,7 @@ def get_fault_summary(project_id: int, query: Optional[str] = None) -> Dict[str,
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Update a fault (resolved/ignored/assignee).")
 def update_fault(project_id: int, fault_id: int, 
                 resolved: Optional[bool] = None, 
                 ignored: Optional[bool] = None,
@@ -416,7 +416,7 @@ def update_fault(project_id: int, fault_id: int,
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Delete a fault.")
 def delete_fault(project_id: int, fault_id: int) -> Dict[str, str]:
     """
     Delete a fault.
@@ -435,7 +435,7 @@ def delete_fault(project_id: int, fault_id: int) -> Dict[str, str]:
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Get occurrences time-series for a fault.")
 def get_fault_occurrences(project_id: int, fault_id: int, 
                          period: Optional[str] = "day") -> List[List[Union[int, float]]]:
     """
@@ -519,7 +519,7 @@ def _compact_notice(notice: Dict[str, Any], backtrace_limit: int = 5) -> Dict[st
     return compact
 
 
-@mcp.tool()
+@mcp.tool(description="List notices for a fault (time filters; compact by default).")
 def get_fault_notices(
     project_id: int,
     fault_id: int,
@@ -575,7 +575,7 @@ def get_fault_notices(
     return _add_list_metadata(response, limit or 5)
 
 
-@mcp.tool()
+@mcp.tool(description="Pause notifications for a fault (by time or count).")
 def pause_fault_notifications(project_id: int, fault_id: int, 
                             time: Optional[str] = None, 
                             count: Optional[int] = None) -> Dict[str, str]:
@@ -607,7 +607,7 @@ def pause_fault_notifications(project_id: int, fault_id: int,
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Unpause notifications for a fault.")
 def unpause_fault_notifications(project_id: int, fault_id: int) -> Dict[str, str]:
     """
     Unpause notifications for a fault.
@@ -626,7 +626,7 @@ def unpause_fault_notifications(project_id: int, fault_id: int) -> Dict[str, str
     return response
 
 
-@mcp.tool()
+@mcp.tool(description="Resolve all faults for a project (optional query filter).")
 def bulk_resolve_faults(project_id: int, query: Optional[str] = None) -> Dict[str, str]:
     """
     Mark all faults for a project as resolved.
@@ -652,4 +652,4 @@ def bulk_resolve_faults(project_id: int, query: Optional[str] = None) -> Dict[st
 
 if __name__ == "__main__":
     # Run the server
-    mcp.run() 
+    mcp.run()
