@@ -520,7 +520,7 @@ def _compact_notice(notice: Dict[str, Any], backtrace_limit: int = 5) -> Dict[st
     return compact
 
 
-@mcp.tool(description="List notices for a fault (time filters; compact by default).")
+@mcp.tool(description="List notices for a fault (compact by default; use get_notice for full).")
 def get_fault_notices(
     project_id: int,
     fault_id: int,
@@ -570,10 +570,34 @@ def get_fault_notices(
         ]
         response["_compact_mode"] = {
             "enabled": True,
-            "hint": "For full backtrace with source code, call with compact=False",
+            "hint": "Increase backtrace_limit for more frames. For a full notice, call get_notice(notice_id=<id>, compact=False).",
         }
 
     return _add_list_metadata(response, limit or 5)
+
+
+@mcp.tool(description="Get a notice by notice_id (uuid).")
+def get_notice(
+    notice_id: str,
+    compact: bool = True,
+    backtrace_limit: int = 5,
+) -> Dict[str, Any]:
+    """
+    Get a single Honeybadger notice (occurrence).
+
+    Args:
+        notice_id: Notice UUID (from get_fault_notices results[].id)
+        compact: If True (default), returns essential fields only.
+                 Set to False for full notice (may be large).
+        backtrace_limit: Stack frames to include in compact mode (default: 5)
+
+    Returns:
+        Notice details (compact by default)
+    """
+    response = _make_request(f"notices/{notice_id}")
+    if compact and isinstance(response, dict) and "error" not in response:
+        return _compact_notice(response, backtrace_limit)
+    return response
 
 
 @mcp.tool(description="Pause notifications for a fault (by time or count).")

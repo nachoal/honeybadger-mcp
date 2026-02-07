@@ -8,7 +8,7 @@ from server import (
     get_projects, get_project, create_project, update_project, delete_project,
     get_project_occurrences, get_faults, get_fault_details, get_fault_summary,
     update_fault, delete_fault, get_fault_occurrences, pause_fault_notifications,
-    unpause_fault_notifications, bulk_resolve_faults, get_fault_notices
+    unpause_fault_notifications, bulk_resolve_faults, get_fault_notices, get_notice
 )
 
 # Load environment variables from .env file
@@ -93,6 +93,11 @@ def main():
     fault_notices_parser.add_argument("--created-after", type=int, dest="created_after", help="Unix timestamp: only notices created after this time")
     fault_notices_parser.add_argument("--created-before", type=int, dest="created_before", help="Unix timestamp: only notices created before this time")
     fault_notices_parser.add_argument("--limit", type=int, default=25, help="Number of results to return (max/default 25)")
+
+    notice_parser = subparsers.add_parser("notice", help="Get a single notice by ID")
+    notice_parser.add_argument("notice_id", help="Notice UUID (from fault-notices results[].id)")
+    notice_parser.add_argument("--compact", choices=["true", "false"], default="true", help="Return compact output (default true)")
+    notice_parser.add_argument("--backtrace-limit", type=int, default=5, dest="backtrace_limit", help="Stack frames in compact mode")
     
     pause_fault_parser = subparsers.add_parser("pause-fault", help="Pause fault notifications")
     pause_fault_parser.add_argument("project_id", type=int, help="Project ID")
@@ -203,6 +208,15 @@ def main():
                 created_after=args.created_after,
                 created_before=args.created_before,
                 limit=args.limit,
+            )
+
+        elif args.command == "notice":
+            print(f"Fetching notice {args.notice_id}...")
+            compact = args.compact.lower() == "true"
+            result = get_notice(
+                notice_id=args.notice_id,
+                compact=compact,
+                backtrace_limit=args.backtrace_limit,
             )
         
         elif args.command == "pause-fault":
